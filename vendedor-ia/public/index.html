@@ -108,6 +108,7 @@ code{background:var(--bg);padding:2px 6px;border-radius:6px;font-size:13px;word-
   .mobnav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);z-index:40;padding-bottom:env(safe-area-inset-bottom)}
   .mobnav a{flex:1;flex-direction:column;gap:2px;font-size:11px;padding:8px 2px;text-align:center;justify-content:center;border-radius:0}
   .mobnav a b{font-size:18px}
+  .mobnav a .badge{position:absolute;top:3px;right:14%;padding:1px 6px;font-size:10px}
   .chatwrap{grid-template-columns:1fr;height:calc(100vh - 170px)}
   .chatwrap.open .chatlist{display:none} .chatwrap:not(.open) .chatpane{display:none}
   .phone{height:calc(100vh - 200px);border-width:0;border-radius:14px}
@@ -125,7 +126,7 @@ code{background:var(--bg);padding:2px 6px;border-radius:6px;font-size:13px;word-
 <script>
 const NAV = [
   ["inicio","📊","Inicio"],["chats","💬","Chats"],["pedidos","🧾","Pedidos"],
-  ["catalogo","🏷️","Catálogo"],["configurar","✨","Configurar"],["probar","🧪","Probar"],["whatsapp","🔌","WhatsApp"],
+  ["catalogo","🏷️","Catálogo"],["configurar","✨","Configurar"],["probar","🧪","Probar"],["whatsapp","🔌","Conexión"],
 ];
 const ETAPAS = {nuevo:["Nuevo",""],interesado:["Interesado","b-info"],pedido:["Pedido","b-warn"],pagado:["Pagado","b-ok"],perdido:["Perdido","b-bad"]};
 const ESTADOS = {pendiente_pago:["Pendiente de pago","b-warn"],por_verificar:["Pago por verificar","b-info"],pagado:["Pagado","b-ok"],cancelado:["Cancelado","b-bad"]};
@@ -156,7 +157,7 @@ let state = { route:"inicio", timer:null, badges:{} };
 function renderNav(){
   const link = ([id,ic,label]) => `<a href="#${id}" class="${state.route===id?"on":""}"><b>${ic}</b> ${label}${state.badges[id]?` <span class="badge b-bad">${state.badges[id]}</span>`:""}</a>`;
   $("#sidenav").innerHTML = `<div class="logo"><i>V</i> Vendedor IA</div>` + NAV.map(link).join("");
-  $("#mobnav").innerHTML = NAV.filter(n=>n[0]!=="whatsapp").map(link).join("");
+  $("#mobnav").innerHTML = NAV.map(link).join("");
 }
 async function refreshBadges(){
   try{ const d = await api("/dashboard?days=1"); state.badges = {chats:d.pendientes.humano||0, pedidos:d.pendientes.pagos_por_verificar||0}; renderNav(); }catch{}
@@ -453,16 +454,31 @@ VIEWS.probar = async () => {
 // ====================== WHATSAPP ======================
 VIEWS.whatsapp = async () => {
   const st = await api("/status");
-  $("#view").innerHTML = `<h1>Conectar WhatsApp</h1><p class="sub">Usamos la API oficial de WhatsApp Business de Meta: sin riesgo de bloqueos y con tu número de negocio.</p>
-    <div class="card" style="margin-bottom:14px">${[[st.claude,"Clave de IA (ANTHROPIC_API_KEY)"],[st.whatsapp,"Token y número de WhatsApp"],[st.verify_token,"Token de verificación del webhook"],[st.public_url,"Dirección pública (PUBLIC_URL) para enviar fotos de productos"]]
-      .map(([ok,t])=>`<div class="check"><span class="dot ${ok?"ok":"no"}">${ok?"✓":"!"}</span><b>${t}</b></div>`).join("")}</div>
-    <div class="card"><h2>Pasos (una sola vez, ~20 minutos)</h2><ol class="steps">
-      <li>Entra a <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com</a> → <b>Crear app</b> → tipo <b>Empresa</b> → agrega el producto <b>WhatsApp</b>.</li>
-      <li>En <b>WhatsApp → Configuración de la API</b> copia el <b>Identificador del número de teléfono</b> y genera un <b>token permanente</b> (Configuración del negocio → Usuarios del sistema).</li>
-      <li>Pon esos datos en el archivo <code>.env</code>: <code>WHATSAPP_TOKEN</code>, <code>WHATSAPP_PHONE_NUMBER_ID</code>, inventa un <code>WHATSAPP_VERIFY_TOKEN</code> y copia el <code>WHATSAPP_APP_SECRET</code> (Configuración de la app → Básica). Reinicia el programa.</li>
-      <li>En <b>WhatsApp → Configuración → Webhook</b> pega esta URL:<br><code>${esc(st.webhook_url)}</code><br>y el mismo token de verificación. Suscríbete al campo <b>messages</b>.</li>
-      <li>Agrega tu número de negocio real (o usa el de prueba) y escríbele desde tu celular. ¡Listo! Verás el chat en <a href="#chats">Chats</a>.</li></ol>
-      <p class="small muted">Importante: WhatsApp permite responder libremente hasta 24 horas después del último mensaje del cliente. Por eso los seguimientos automáticos se envían dentro de esa ventana.</p></div>`;
+  const base = st.webhook_url.replace(/\/webhook$/, "");
+  $("#view").innerHTML = `<h1>Conexión</h1><p class="sub">Usamos la API oficial de WhatsApp Business de Meta: sin riesgo de bloqueos y con tu número de negocio.</p>
+    <div class="grid two" style="margin-bottom:14px">
+      <div class="card"><h2>Configuración del servidor</h2>${[[st.claude,"Clave de IA (ANTHROPIC_API_KEY)"],[st.whatsapp,"Token y número de WhatsApp"],[st.verify_token,"Token de verificación del webhook"],[st.public_url,"Dirección pública (PUBLIC_URL)"]]
+        .map(([ok,t])=>`<div class="check"><span class="dot ${ok?"ok":"no"}">${ok?"✓":"!"}</span><b>${t}</b></div>`).join("")}</div>
+      <div class="card"><h2>Prueba real de conexión</h2><p class="small muted">Verifica que la clave de IA y el token de WhatsApp funcionen de verdad.</p>
+        <button class="btn pri" id="diag">🔍 Probar conexión</button><div id="diagout" style="margin-top:12px"></div>
+        <h2 style="margin-top:18px">Respaldo</h2><p class="small muted">Descarga una copia de todos tus chats, pedidos y catálogo. Hazlo cada semana.</p>
+        <a class="btn" href="/api/respaldo">⬇️ Descargar respaldo</a></div>
+    </div>
+    <div class="card"><h2>Datos para Meta</h2>
+      <div class="check"><div style="min-width:0"><b>URL del webhook</b><br><code>${esc(st.webhook_url)}</code></div></div>
+      <div class="check"><div style="min-width:0"><b>Política de privacidad</b> <small class="muted">(Meta la pide para activar la app)</small><br><code>${esc(base)}/privacidad</code> · <a href="/privacidad" target="_blank">ver</a></div></div>
+      <div class="check"><div><b>Campo a suscribir</b><br><code>messages</code></div></div>
+      <p class="small muted" style="margin-top:12px">La guía completa paso a paso está en el archivo <code>GUIA-PILOTO.md</code>. WhatsApp permite responder libremente hasta 24 horas después del último mensaje del cliente; los seguimientos automáticos se envían dentro de esa ventana.</p></div>`;
+  $("#diag").onclick = async () => {
+    $("#diag").disabled = true; $("#diagout").innerHTML = `<span class="muted small">Probando…</span>`;
+    try{
+      const d = await api("/diagnostico");
+      const row = (ok,t,det)=>`<div class="check"><span class="dot ${ok?"ok":"no"}">${ok?"✓":"!"}</span><div><b>${t}</b><div class="small muted">${esc(det)}</div></div></div>`;
+      $("#diagout").innerHTML = row(d.ia.ok,"Inteligencia artificial",d.ia.detalle) + row(d.whatsapp.ok,"WhatsApp",d.whatsapp.detalle)
+        + row(!!d.ultimo_mensaje_whatsapp,"Mensajes recibidos", d.ultimo_mensaje_whatsapp ? "Último mensaje de un cliente: "+fmtDate(d.ultimo_mensaje_whatsapp) : "Aún no llega ningún mensaje por WhatsApp. Escríbele al número desde tu celular.");
+    }catch(e){ $("#diagout").textContent = e.message; }
+    $("#diag").disabled = false;
+  };
 };
 
 renderNav(); route(); refreshBadges(); setInterval(refreshBadges, 20000);

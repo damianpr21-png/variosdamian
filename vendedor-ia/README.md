@@ -35,9 +35,16 @@ Abre **http://localhost:3000**, y luego:
 2. **Probar**: chatea como cliente. Pide precios, di "está caro", compra y manda una foto de un comprobante.
 3. **WhatsApp**: sigue los pasos de esa pestaña para conectar tu número (unos 20 minutos, una sola vez).
 
-### Subirlo a internet
+### Subirlo a internet y lanzar un piloto
 
-WhatsApp necesita una dirección pública con HTTPS para enviar los mensajes. Sirve cualquier servidor que ejecute Node, por ejemplo Railway, Render, Fly.io o un VPS. Guarda la carpeta `data/` en un disco persistente, porque ahí están la base de datos y las fotos. Después pon esa dirección en `PUBLIC_URL`.
+Sigue **[GUIA-PILOTO.md](GUIA-PILOTO.md)**: servidor en Railway (ya incluye `Dockerfile` y `railway.json`), conexión con WhatsApp oficial, guion de pruebas, métricas y criterios de éxito.
+
+Protecciones incluidas para producción:
+- El panel se bloquea si está en internet sin `PANEL_PASSWORD`.
+- Se verifica la firma de Meta en el webhook (`WHATSAPP_APP_SECRET`).
+- Hay un tope de respuestas de IA por chat al día (`IA_LIMITE_DIARIO_POR_CHAT`).
+- Respaldo descargable y diagnóstico real de conexión en la pestaña **Conexión**.
+- Página pública de privacidad en `/privacidad`, que Meta pide para activar la app.
 
 ## Costos aproximados
 

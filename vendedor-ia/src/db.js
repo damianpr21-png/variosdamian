@@ -7,7 +7,7 @@ const DATA_DIR = process.env.DATA_DIR || "./data";
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 export const db = new DatabaseSync(process.env.DB_PATH || path.join(DATA_DIR, "vendedor.db"));
-db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
+db.exec("PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS settings (

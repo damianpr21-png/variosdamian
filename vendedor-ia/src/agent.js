@@ -5,7 +5,7 @@ import { SELLER_TOOLS, runSellerTool } from "./tools.js";
 import { buildSystemPrompt, ecuadorNow } from "./prompt.js";
 import { sendToCustomer, notifyOwner } from "./outbound.js";
 import {
-  getOrCreateConversation, getConversation, updateConversation, addMessage, getHistory, appendHistory,
+  db, getOrCreateConversation, getConversation, updateConversation, addMessage, getHistory, appendHistory,
   getSettings, logEvent, now,
 } from "./db.js";
 
@@ -32,6 +32,15 @@ export function receiveMessage(msg) {
   });
 
   if (conv.modo !== "ia" || !settings.bot.activo) return; // lo atiende una persona
+
+  // Tope de respuestas de IA por chat al día: protege tu gasto si alguien abusa o hay un bucle.
+  const limit = Number(process.env.IA_LIMITE_DIARIO_POR_CHAT) || 80;
+  const today = db.prepare("SELECT COUNT(*) n FROM events WHERE conv_id = ? AND type = 'respuesta_ia' AND created_at >= datetime('now','-1 day')").get(conv.id).n;
+  if (today >= limit) {
+    updateConversation(conv.id, { modo: "humano", motivo_humano: `Llegó al límite de ${limit} respuestas de IA en 24 h` });
+    notifyOwner("humano", conv, `Un chat llegó al límite diario de respuestas de la IA (${limit}). Revísalo: puede ser un cliente muy activo o alguien abusando.`).catch(() => {});
+    return;
+  }
 
   // Audios, stickers, videos: la IA no los puede ver/escuchar, pero responde con naturalidad dentro de la misma conversación.
   if (!msg.text && !msg.images?.length && !msg.pdfs?.length) {

@@ -13,6 +13,7 @@ import { sendToCustomer } from "./outbound.js";
 import { setupChat, setupTranscript, resetSetup } from "./setup-assistant.js";
 import { startFollowUpScheduler } from "./followups.js";
 import * as wa from "./whatsapp.js";
+import { client as claudeClient, MODEL } from "./claude.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(here, "..", "public");
@@ -77,10 +78,28 @@ function seen(id) {
   return false;
 }
 
+// Política de privacidad pública: Meta pide una URL para poner la app en modo "Activo".
+app.get("/privacidad", (req, res) => {
+  const n = getSettings().negocio;
+  const nombre = (n.nombre || "Este negocio").replace(/[<>&"]/g, "");
+  res.type("html").send(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Privacidad · ${nombre}</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;max-width:720px;margin:40px auto;padding:0 16px;color:#1a1a1a;background:#fff}h1{font-size:24px}</style></head><body>
+<h1>Política de privacidad de ${nombre}</h1>
+<p>Cuando nos escribes por WhatsApp, guardamos tu número, tu nombre de perfil y los mensajes, fotos o comprobantes que nos envías. Los usamos solo para atender tu consulta, procesar tus pedidos y pagos, y darte seguimiento.</p>
+<p>Las respuestas pueden generarse con ayuda de un asistente de inteligencia artificial (Anthropic Claude), que procesa tus mensajes para responderte. En cualquier momento puedes pedir hablar con una persona.</p>
+<p>No vendemos ni compartimos tus datos con terceros para publicidad. Solo los compartimos con los proveedores necesarios para operar el servicio (Meta/WhatsApp y el proveedor de IA).</p>
+<p>Puedes pedir que eliminemos tus datos escribiéndonos por el mismo WhatsApp con la palabra "ELIMINAR MIS DATOS".</p>
+<p>Última actualización: ${new Date().toISOString().slice(0, 10)}.</p></body></html>`);
+});
+
 // ---------------- Panel (protegido con contraseña) ----------------
 function auth(req, res, next) {
   const pass = process.env.PANEL_PASSWORD;
-  if (!pass) return next();
+  if (!pass) {
+    // En internet el panel nunca queda abierto: sin contraseña, se bloquea.
+    if (process.env.PUBLIC_URL) return res.status(503).send("Configura PANEL_PASSWORD en las variables del servidor para usar el panel.");
+    return next();
+  }
   const [type, value] = (req.get("authorization") || "").split(" ");
   if (type === "Basic" && value) {
     const [, given] = Buffer.from(value, "base64").toString().split(/:(.*)/s);
@@ -125,6 +144,36 @@ api.get("/status", (req, res) => {
     productos: listProducts(true).length,
     pagos_configurados: Boolean(getSettings().negocio.metodos_pago?.trim()),
   });
+});
+
+// Diagnóstico: prueba de verdad la clave de IA y la conexión de WhatsApp.
+api.get("/diagnostico", h(async (req, res) => {
+  const out = { ia: null, whatsapp: null };
+  try {
+    const m = await claudeClient.models.retrieve(MODEL);
+    out.ia = { ok: true, detalle: `Modelo ${m.display_name || m.id} disponible` };
+  } catch (e) {
+    out.ia = { ok: false, detalle: e.status === 401 ? "La clave ANTHROPIC_API_KEY no es válida" : e.message };
+  }
+  if (!wa.whatsappConfigured()) out.whatsapp = { ok: false, detalle: "Faltan WHATSAPP_TOKEN y WHATSAPP_PHONE_NUMBER_ID" };
+  else {
+    try {
+      const p = await wa.phoneInfo();
+      out.whatsapp = { ok: true, detalle: `${p.verified_name || "Número"} ${p.display_phone_number || ""} · calidad: ${p.quality_rating || "—"} · nombre: ${p.name_status || "—"}` };
+    } catch (e) {
+      out.whatsapp = { ok: false, detalle: e.message.slice(0, 300) };
+    }
+  }
+  const last = db.prepare("SELECT created_at FROM messages WHERE role = 'cliente' AND conv_id IN (SELECT id FROM conversations WHERE canal = 'whatsapp') ORDER BY id DESC LIMIT 1").get();
+  out.ultimo_mensaje_whatsapp = last?.created_at || null;
+  res.json(out);
+}));
+
+// Respaldo: descarga una copia completa de la base de datos.
+api.get("/respaldo", (req, res) => {
+  const file = path.join(DATA_DIR, `respaldo-${Date.now()}.db`);
+  db.exec(`VACUUM INTO '${file.replace(/'/g, "''")}'`);
+  res.download(file, `vendedor-ia-respaldo-${new Date().toISOString().slice(0, 10)}.db`, () => fs.rm(file, () => {}));
 });
 
 // ---- Métricas ----
@@ -308,6 +357,8 @@ const PORT = Number(process.env.PORT) || 3000;
 app.listen(PORT, () => {
   console.log(`\n✅ Vendedor IA funcionando en http://localhost:${PORT}`);
   if (!process.env.ANTHROPIC_API_KEY) console.log("⚠️  Falta ANTHROPIC_API_KEY en el archivo .env");
+  if (process.env.PUBLIC_URL && !process.env.PANEL_PASSWORD) console.log("⛔ Falta PANEL_PASSWORD: el panel queda bloqueado hasta que la configures.");
+  if (process.env.PUBLIC_URL && !process.env.WHATSAPP_APP_SECRET) console.log("⚠️  Falta WHATSAPP_APP_SECRET: no se puede verificar que los mensajes vengan de Meta.");
   if (!wa.whatsappConfigured()) console.log("ℹ️  WhatsApp aún no conectado: puedes probar todo en la pestaña 'Probar'.");
   startFollowUpScheduler();
 });

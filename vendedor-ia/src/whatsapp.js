@@ -18,13 +18,23 @@ async function graph(pathname, body) {
   return data;
 }
 
-export const sendText = (to, text) =>
-  graph(`${PHONE_ID()}/messages`, {
-    messaging_product: "whatsapp",
-    to,
-    type: "text",
-    text: { body: text, preview_url: true },
-  });
+export async function sendText(to, text) {
+  // WhatsApp acepta hasta 4096 caracteres por mensaje.
+  const chunks = String(text).match(/[\s\S]{1,4000}(?=\s|$)|[\s\S]{1,4000}/g) || [""];
+  let last;
+  for (const body of chunks) {
+    last = await graph(`${PHONE_ID()}/messages`, {
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { body: body.trim(), preview_url: true },
+    });
+  }
+  return last;
+}
+
+// Datos del número conectado (para el diagnóstico del panel).
+export const phoneInfo = () => graph(`${PHONE_ID()}?fields=display_phone_number,verified_name,quality_rating,code_verification_status,name_status`);
 
 export const sendImage = (to, link, caption = "") =>
   graph(`${PHONE_ID()}/messages`, {
