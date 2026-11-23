@@ -1,0 +1,20 @@
+{
+  "name": "vendedor-ia",
+  "version": "0.1.0",
+  "description": "Vendedor automático de WhatsApp con IA: responde, vende, cobra y hace seguimiento.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env --no-warnings=ExperimentalWarning src/server.js",
+    "dev": "node --watch --env-file-if-exists=.env --no-warnings=ExperimentalWarning src/server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.12.0",
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  }
+}

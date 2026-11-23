@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vendedor IA</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2316a34a'/><text x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>V</text></svg>">
+<style>
+:root{
+  --bg:#f5f7f6; --card:#fff; --ink:#0f1a14; --muted:#5d6b63; --line:#e3e8e5;
+  --brand:#16a34a; --brand-ink:#fff; --brand-soft:#e7f6ec; --warn:#b45309; --warn-soft:#fdf3e2;
+  --bad:#b91c1c; --bad-soft:#fdecec; --info:#1d4ed8; --info-soft:#e8eefc;
+  --bubble-in:#fff; --bubble-out:#d9fdd3; --chat-bg:#efeae2; --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0d1210; --card:#151c19; --ink:#e7eeea; --muted:#93a39a; --line:#26302b;
+    --brand:#22c55e; --brand-ink:#04130a; --brand-soft:#123222; --warn:#f59e0b; --warn-soft:#2e2310;
+    --bad:#f87171; --bad-soft:#341616; --info:#7aa2ff; --info-soft:#17213a;
+    --bubble-in:#1f2a25; --bubble-out:#144d37; --chat-bg:#0b100e; --shadow:none;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:var(--brand)}
+.app{display:flex;min-height:100vh}
+nav.side{width:220px;flex:none;background:var(--card);border-right:1px solid var(--line);padding:18px 12px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;padding:4px 10px 16px}
+.logo i{width:32px;height:32px;border-radius:9px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-style:normal}
+nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;color:var(--ink);text-decoration:none;font-weight:500;position:relative}
+nav a:hover{background:var(--bg)}
+nav a.on{background:var(--brand-soft);color:var(--brand);font-weight:700}
+nav a .badge{margin-left:auto}
+main{flex:1;min-width:0;padding:24px;max-width:1200px}
+h1{font-size:24px;margin:0 0 4px} h2{font-size:17px;margin:0 0 12px} .sub{color:var(--muted);margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.kpi .v{font-size:28px;font-weight:800;letter-spacing:-.5px}
+.kpi .l{color:var(--muted);font-size:13px}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+.two{grid-template-columns:1fr 1fr} @media(max-width:900px){.two{grid-template-columns:1fr}}
+.btn{border:1px solid var(--line);background:var(--card);padding:9px 14px;border-radius:10px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{filter:brightness(.97)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.bad{color:var(--bad)} .btn.sm{padding:5px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:700;background:var(--bg);color:var(--muted)}
+.b-ok{background:var(--brand-soft);color:var(--brand)} .b-warn{background:var(--warn-soft);color:var(--warn)}
+.b-bad{background:var(--bad-soft);color:var(--bad)} .b-info{background:var(--info-soft);color:var(--info)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+label.f{display:block;margin-bottom:12px} label.f span{display:block;font-size:13px;font-weight:600;margin-bottom:4px} label.f small{color:var(--muted);font-weight:400}
+input.i,textarea.i,select.i{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);outline:none}
+input.i:focus,textarea.i:focus{border-color:var(--brand)}
+textarea.i{min-height:70px;resize:vertical}
+.list{display:flex;flex-direction:column}
+.item{padding:12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:10px;align-items:flex-start}
+.item:hover,.item.on{background:var(--bg)}
+.av{width:38px;height:38px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-weight:800;flex:none}
+.trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.muted{color:var(--muted)} .small{font-size:13px}
+.chatwrap{display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 140px);min-height:480px;overflow:hidden;padding:0}
+.chatlist{border-right:1px solid var(--line);overflow:auto}
+.chatpane{display:flex;flex-direction:column;min-width:0}
+.chathead{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.msgs{flex:1;overflow:auto;background:var(--chat-bg);padding:16px;display:flex;flex-direction:column;gap:6px}
+.bub{max-width:78%;padding:7px 10px 5px;border-radius:10px;background:var(--bubble-in);box-shadow:0 1px .5px rgba(0,0,0,.12);white-space:pre-wrap;word-wrap:break-word;align-self:flex-start}
+.bub.out{background:var(--bubble-out);align-self:flex-end}
+.bub .who{font-size:11px;font-weight:700;color:var(--brand)} .bub.hum .who{color:var(--info)}
+.bub .t{font-size:11px;color:var(--muted);text-align:right;margin-top:2px}
+.bub img{max-width:240px;border-radius:8px;display:block;margin-bottom:4px}
+.bub.sys{align-self:center;background:var(--warn-soft);color:var(--warn);font-size:12px}
+.composer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);background:var(--card)}
+.composer textarea{flex:1;min-height:42px;max-height:120px}
+.empty{display:grid;place-items:center;color:var(--muted);text-align:center;padding:40px;flex:1}
+.prods{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.prod .ph{aspect-ratio:5/2 !important}
+.prod img,.prod .ph{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;background:var(--bg);display:grid;place-items:center;color:var(--muted);margin-bottom:10px}
+.price{font-size:20px;font-weight:800}
+.bar{height:10px;border-radius:99px;background:var(--bg);overflow:hidden} .bar i{display:block;height:100%;background:var(--brand)}
+.phone{max-width:420px;width:100%;height:calc(100vh - 160px);min-height:520px;border-radius:28px;border:8px solid #1b1f1d;overflow:hidden;display:flex;flex-direction:column;background:var(--chat-bg)}
+.phone .top{background:#075e54;color:#fff;padding:12px 14px;display:flex;gap:10px;align-items:center}
+@media (prefers-color-scheme: dark){.phone .top{background:#1f2c34}}
+.phone .top .av{background:#fff3;color:#fff}
+.typing{align-self:flex-start;background:var(--bubble-in);padding:8px 12px;border-radius:10px;font-size:13px;color:var(--muted)}
+.modal{position:fixed;inset:0;background:#0007;display:grid;place-items:center;padding:16px;z-index:50}
+.modal .card{width:100%;max-width:520px;max-height:90vh;overflow:auto}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:60;font-weight:600}
+.steps li{margin-bottom:10px}
+.check{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.check:last-child{border:0}
+.dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;flex:none}
+.dot.ok{background:var(--brand-soft);color:var(--brand)} .dot.no{background:var(--warn-soft);color:var(--warn)}
+.setupchat{display:flex;flex-direction:column;height:calc(100vh - 170px);min-height:480px;padding:0;overflow:hidden}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.chip{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--card);cursor:pointer;font-weight:600;font-size:13px}
+.chip.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tabs button{border:0;background:none;padding:8px 12px;cursor:pointer;font-weight:600;color:var(--muted);border-bottom:2px solid transparent}
+.tabs button.on{color:var(--brand);border-color:var(--brand)}
+code{background:var(--bg);padding:2px 6px;border-radius:6px;font-size:13px;word-break:break-all}
+.mobnav{display:none}
+@media(max-width:760px){
+  nav.side{display:none}
+  main{padding:16px 16px 90px}
+  .mobnav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);z-index:40;padding-bottom:env(safe-area-inset-bottom)}
+  .mobnav a{flex:1;flex-direction:column;gap:2px;font-size:11px;padding:8px 2px;text-align:center;justify-content:center;border-radius:0}
+  .mobnav a b{font-size:18px}
+  .chatwrap{grid-template-columns:1fr;height:calc(100vh - 170px)}
+  .chatwrap.open .chatlist{display:none} .chatwrap:not(.open) .chatpane{display:none}
+  .phone{height:calc(100vh - 200px);border-width:0;border-radius:14px}
+  .setupchat{height:calc(100vh - 220px)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="side" id="sidenav"></nav>
+  <main id="view"></main>
+</div>
+<nav class="mobnav" id="mobnav"></nav>
+
+<script>
+const NAV = [
+  ["inicio","📊","Inicio"],["chats","💬","Chats"],["pedidos","🧾","Pedidos"],
+  ["catalogo","🏷️","Catálogo"],["configurar","✨","Configurar"],["probar","🧪","Probar"],["whatsapp","🔌","WhatsApp"],
+];
+const ETAPAS = {nuevo:["Nuevo",""],interesado:["Interesado","b-info"],pedido:["Pedido","b-warn"],pagado:["Pagado","b-ok"],perdido:["Perdido","b-bad"]};
+const ESTADOS = {pendiente_pago:["Pendiente de pago","b-warn"],por_verificar:["Pago por verificar","b-info"],pagado:["Pagado","b-ok"],cancelado:["Cancelado","b-bad"]};
+const $ = (s,el=document)=>el.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = n => "$"+Number(n||0).toFixed(2);
+const fmtDate = s => { if(!s) return ""; const d=new Date(s.replace(" ","T")+"Z"); const today=new Date().toDateString()===d.toDateString();
+  return today ? d.toLocaleTimeString("es-EC",{hour:"2-digit",minute:"2-digit"}) : d.toLocaleDateString("es-EC",{day:"numeric",month:"short"})+" "+d.toLocaleTimeString("es-EC",{hour:"2-digit",minute:"2-digit"}); };
+const initials = s => (s||"?").trim().split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase();
+const badge = ([t,c]) => `<span class="badge ${c}">${esc(t)}</span>`;
+async function api(path, opts={}){
+  const r = await fetch("/api"+path, {headers:{"Content-Type":"application/json"}, ...opts, body: opts.body!==undefined ? JSON.stringify(opts.body) : undefined});
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(data.error || ("Error "+r.status));
+  return data;
+}
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
+const readFile = f => new Promise((ok,ko)=>{ const r=new FileReader(); r.onload=()=>ok(r.result); r.onerror=ko; r.readAsDataURL(f); });
+async function shrinkImage(file, max=1600){
+  if(!file.type.startsWith("image/")) return readFile(file);
+  const url = await readFile(file); const img = new Image(); img.src = url; await img.decode();
+  const k = Math.min(1, max/Math.max(img.width,img.height)); const c=document.createElement("canvas");
+  c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  return c.toDataURL("image/jpeg",.85);
+}
+
+let state = { route:"inicio", timer:null, badges:{} };
+function renderNav(){
+  const link = ([id,ic,label]) => `<a href="#${id}" class="${state.route===id?"on":""}"><b>${ic}</b> ${label}${state.badges[id]?` <span class="badge b-bad">${state.badges[id]}</span>`:""}</a>`;
+  $("#sidenav").innerHTML = `<div class="logo"><i>V</i> Vendedor IA</div>` + NAV.map(link).join("");
+  $("#mobnav").innerHTML = NAV.filter(n=>n[0]!=="whatsapp").map(link).join("");
+}
+async function refreshBadges(){
+  try{ const d = await api("/dashboard?days=1"); state.badges = {chats:d.pendientes.humano||0, pedidos:d.pendientes.pagos_por_verificar||0}; renderNav(); }catch{}
+}
+function route(){
+  state.route = (location.hash.slice(1).split("/")[0]) || "inicio";
+  clearInterval(state.timer); renderNav();
+  (VIEWS[state.route]||VIEWS.inicio)(location.hash.split("/")[1]);
+}
+function poll(fn, ms=3000){ clearInterval(state.timer); state.timer = setInterval(fn, ms); }
+window.addEventListener("hashchange", route);
+
+// ====================== INICIO ======================
+const VIEWS = {};
+VIEWS.inicio = async () => {
+  const v = $("#view");
+  v.innerHTML = `<h1>Hola 👋</h1><p class="sub">Así va tu vendedor. Lo que no se mide, no se mejora.</p><div id="setupbox"></div>
+    <div class="chips" id="range">${[1,7,30].map(d=>`<button class="chip ${d===7?"on":""}" data-d="${d}">${d===1?"Hoy":`Últimos ${d} días`}</button>`).join("")}</div>
+    <div id="dash">Cargando…</div>`;
+  const st = await api("/status");
+  const steps = [
+    [st.claude,"Clave de IA configurada","Agrega ANTHROPIC_API_KEY en el archivo .env"],
+    [st.productos>0,`Catálogo cargado (${st.productos} productos)`,`<a href="#configurar">Cuéntale a la IA qué vendes</a> o <a href="#catalogo">agrega productos</a>`],
+    [st.pagos_configurados,"Datos de pago","<a href='#configurar'>Dile a la IA cómo te pagan (Deuna, transferencia…)</a>"],
+    [st.whatsapp,"WhatsApp conectado","<a href='#whatsapp'>Ver cómo conectarlo</a>"],
+  ];
+  if(steps.some(s=>!s[0])) $("#setupbox").innerHTML = `<div class="card" style="margin-bottom:16px"><h2>Primeros pasos</h2>${steps.map(([ok,t,hint])=>`<div class="check"><span class="dot ${ok?"ok":"no"}">${ok?"✓":"!"}</span><div><b>${t}</b>${ok?"":`<div class="small muted">${hint}</div>`}</div></div>`).join("")}
+    <div class="row" style="margin-top:10px"><a class="btn pri" href="#probar">🧪 Probar mi vendedor</a></div></div>`;
+  let days = 7;
+  $("#range").onclick = e => { const b=e.target.closest(".chip"); if(!b) return; days=+b.dataset.d; [...$("#range").children].forEach(c=>c.classList.toggle("on",c===b)); load(); };
+  async function load(){
+    const d = await api("/dashboard?days="+days);
+    const f = d.embudo, total = Object.values(f).reduce((a,b)=>a+b,0)||1;
+    const funnel = ["interesado","pedido","pagado","perdido"].map(k=>`<div style="margin-bottom:10px"><div class="row small"><b>${ETAPAS[k][0]}</b><span class="spacer"></span>${f[k]||0}</div><div class="bar"><i style="width:${(f[k]||0)/total*100}%;${k==="perdido"?"background:var(--bad)":""}"></i></div></div>`).join("");
+    $("#dash").innerHTML = `
+      <div class="grid kpis">
+        <div class="card kpi"><div class="l">Ventas confirmadas</div><div class="v">${money(d.monto_ventas)}</div><div class="s">${d.ventas} pedidos pagados</div></div>
+        <div class="card kpi"><div class="l">Conversaciones</div><div class="v">${d.conversaciones}</div><div class="s">${d.mensajes_fuera_horario} mensajes fuera de horario</div></div>
+        <div class="card kpi"><div class="l">Conversión</div><div class="v">${(d.conversion*100).toFixed(1)}%</div><div class="s">de chat a venta pagada</div></div>
+        <div class="card kpi"><div class="l">Ticket promedio</div><div class="v">${money(d.ticket_promedio)}</div><div class="s">${d.pedidos} pedidos creados (${money(d.monto_pedidos)})</div></div>
+        <div class="card kpi"><div class="l">Recuperadas por seguimiento</div><div class="v">${money(d.recuperadas_por_seguimiento.monto)}</div><div class="s">${d.recuperadas_por_seguimiento.n} ventas · ${d.seguimientos} seguimientos</div></div>
+        <div class="card kpi"><div class="l">Tiempo de respuesta</div><div class="v">${d.tiempo_respuesta_seg!=null?d.tiempo_respuesta_seg.toFixed(0)+" s":"—"}</div><div class="s">promedio de la IA</div></div>
+      </div>
+      <div class="grid two" style="margin-top:14px">
+        <div class="card"><h2>Requiere tu atención</h2>
+          ${d.alertas.length? d.alertas.map(a=>`<div class="check"><span class="dot ${a.type==="pago"?"ok":"no"}">${a.type==="pago"?"$":"!"}</span><div style="flex:1;min-width:0"><div class="small">${esc(a.text)}</div><div class="small muted">${esc(a.nombre||a.phone||"")} · ${fmtDate(a.created_at)}</div></div>
+            ${a.conv_id?`<a class="btn sm" href="#${a.type==="pago"?"pedidos":"chats/"+a.conv_id}">Ver</a>`:""}<button class="btn sm" data-done="${a.id}">✓</button></div>`).join("") : `<p class="muted">Todo en orden. Tu vendedor está trabajando. ✅</p>`}
+        </div>
+        <div class="card"><h2>Embudo de ventas</h2>${funnel}
+          <h2 style="margin-top:18px">Más vendidos</h2>${d.top_productos.length? d.top_productos.map(t=>`<div class="row small" style="padding:4px 0"><span>${esc(t.nombre)}</span><span class="spacer"></span><b>${t.unidades} u.</b></div>`).join("") : `<p class="muted small">Aún no hay ventas pagadas en este periodo.</p>`}
+        </div>
+      </div>`;
+    $("#dash").onclick = async e => { const b=e.target.closest("[data-done]"); if(b){ await api(`/alerts/${b.dataset.done}/done`,{method:"POST"}); load(); refreshBadges(); } };
+  }
+  await load(); poll(load, 15000);
+};
+
+// ====================== CHATS ======================
+VIEWS.chats = async (openId) => {
+  const v = $("#view");
+  v.innerHTML = `<div class="row" style="margin-bottom:12px"><div><h1>Chats</h1></div><span class="spacer"></span><input class="i" id="q" placeholder="Buscar nombre o número" style="max-width:240px"></div>
+    <div class="card chatwrap ${openId?"open":""}" id="cw"><div class="chatlist" id="cl"></div><div class="chatpane" id="cp"><div class="empty">Elige una conversación</div></div></div>`;
+  let current = openId ? Number(openId) : null, lastSig = "";
+  async function loadList(){
+    const list = await api("/conversations?q="+encodeURIComponent($("#q").value));
+    $("#cl").innerHTML = list.length ? list.map(c=>`<div class="item ${c.id===current?"on":""}" data-id="${c.id}"><div class="av">${esc(initials(c.nombre||c.phone))}</div>
+      <div style="flex:1;min-width:0"><div class="row"><b class="trunc" style="max-width:150px">${esc(c.nombre||"+"+c.phone)}</b><span class="spacer"></span><span class="small muted">${fmtDate(c.ultimo_at)}</span></div>
+      <div class="small muted trunc">${esc(c.ultimo||"")}</div>
+      <div class="row" style="gap:4px;margin-top:4px">${badge(ETAPAS[c.etapa]||[c.etapa,""])}${c.modo==="humano"?badge(["👤 Humano","b-bad"]):badge(["🤖 IA","b-ok"])}${c.canal==="simulador"?badge(["Prueba",""]):""}${c.unread?`<span class="badge b-info">${c.unread}</span>`:""}</div></div></div>`).join("")
+      : `<div class="empty">Aún no hay conversaciones.<br>Cuando un cliente escriba a tu WhatsApp aparecerá aquí.</div>`;
+  }
+  async function loadChat(force){
+    if(!current) return;
+    let c;
+    try{ c = await api("/conversations/"+current); }catch{ current=null; $("#cw").classList.remove("open"); history.replaceState(null,"","#chats"); return; }
+    const sig = c.messages.length+"|"+c.modo+"|"+c.etapa+"|"+c.orders.map(o=>o.estado).join();
+    if(!force && sig===lastSig) return; lastSig = sig;
+    const box = $("#msgs"); const atBottom = !box || box.scrollHeight-box.scrollTop-box.clientHeight<80;
+    $("#cp").innerHTML = `<div class="chathead">
+        <button class="btn sm" id="back" title="Volver">←</button>
+        <div class="av">${esc(initials(c.nombre||c.phone))}</div>
+        <div style="min-width:0"><b>${esc(c.nombre||"Sin nombre")}</b><div class="small muted">${c.canal==="simulador"?"Simulador":"+"+esc(c.phone)}</div></div>
+        <span class="spacer"></span>
+        <select class="i" id="etapa" style="width:auto;padding:6px 8px">${Object.entries(ETAPAS).map(([k,[t]])=>`<option value="${k}" ${k===c.etapa?"selected":""}>${t}</option>`).join("")}</select>
+        ${c.modo==="ia" ? `<button class="btn sm" id="take">👤 Tomar chat</button>` : `<button class="btn sm pri" id="give">🤖 Devolver a la IA</button>`}
+      </div>
+      ${c.modo==="humano"?`<div class="small" style="padding:8px 14px;background:var(--warn-soft);color:var(--warn)">La IA está en pausa en este chat${c.motivo_humano?": "+esc(c.motivo_humano):""}. Responde tú o devuélvelo a la IA.</div>`:""}
+      ${c.notas?`<details class="small" style="padding:8px 14px;border-bottom:1px solid var(--line)"><summary><b>Notas de la IA sobre este cliente</b></summary><div style="white-space:pre-wrap">${esc(c.notas)}</div></details>`:""}
+      ${c.orders.filter(o=>o.estado!=="cancelado").slice(0,1).map(o=>`<div class="small row" style="padding:8px 14px;border-bottom:1px solid var(--line)">🧾 Pedido #${o.id} · <b>${money(o.total)}</b> ${badge(ESTADOS[o.estado])}<span class="spacer"></span><a href="#pedidos">Ver pedidos</a></div>`).join("")}
+      <div class="msgs" id="msgs">${renderMsgs(c.messages)}</div>
+      <div class="composer"><textarea class="i" id="txt" placeholder="Escribe como el equipo (la IA se pausa en este chat)…"></textarea><button class="btn pri" id="send">Enviar</button></div>`;
+    const m = $("#msgs"); if(atBottom||force) m.scrollTop = m.scrollHeight;
+    $("#back").onclick = () => { $("#cw").classList.remove("open"); current=null; location.hash="chats"; };
+    $("#etapa").onchange = async e => { await api(`/conversations/${c.id}/stage`,{method:"POST",body:{etapa:e.target.value}}); toast("Etapa actualizada"); loadList(); };
+    const tk=$("#take"), gv=$("#give");
+    if(tk) tk.onclick = async()=>{ await api(`/conversations/${c.id}/mode`,{method:"POST",body:{modo:"humano"}}); loadChat(true); loadList(); };
+    if(gv) gv.onclick = async()=>{ await api(`/conversations/${c.id}/mode`,{method:"POST",body:{modo:"ia"}}); toast("La IA retoma este chat"); loadChat(true); loadList(); refreshBadges(); };
+    const send = async()=>{ const t=$("#txt").value.trim(); if(!t) return; $("#send").disabled=true; try{ await api(`/conversations/${c.id}/reply`,{method:"POST",body:{text:t}}); $("#txt").value=""; await loadChat(true); }catch(e){ toast(e.message);} $("#send").disabled=false; };
+    $("#send").onclick = send; $("#txt").onkeydown = e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } };
+  }
+  $("#cl").onclick = e => { const it=e.target.closest(".item"); if(!it) return; current=+it.dataset.id; lastSig=""; $("#cw").classList.add("open"); history.replaceState(null,"","#chats/"+current); loadChat(true); loadList(); };
+  $("#q").oninput = () => loadList();
+  await loadList(); await loadChat(true);
+  poll(()=>{ loadList(); loadChat(false); }, 3000);
+};
+function renderMsgs(msgs){
+  if(!msgs.length) return `<div class="empty">Sin mensajes</div>`;
+  return msgs.map(m=>{
+    const out = m.role!=="cliente";
+    const media = m.media_url ? (m.media_url.endsWith(".pdf") ? `<a href="${esc(m.media_url)}" target="_blank">📄 Ver PDF</a><br>` : `<a href="${esc(m.media_url)}" target="_blank"><img src="${esc(m.media_url)}" alt=""></a>`) : "";
+    const who = m.role==="ia"?"🤖 IA":m.role==="humano"?"👤 Equipo":"";
+    return `<div class="bub ${out?"out":""} ${m.role==="humano"?"hum":""}">${who?`<div class="who">${who}</div>`:""}${media}${esc(m.text)}<div class="t">${fmtDate(m.created_at)}</div></div>`;
+  }).join("");
+}
+
+// ====================== PEDIDOS ======================
+VIEWS.pedidos = async () => {
+  const v = $("#view");
+  let filtro = "por_verificar";
+  v.innerHTML = `<h1>Pedidos</h1><p class="sub">Confirma los pagos aquí: el cliente recibe el aviso automáticamente por WhatsApp.</p>
+    <div class="chips" id="fil">${[["por_verificar","Por verificar"],["pendiente_pago","Pendientes de pago"],["pagado","Pagados"],["","Todos"]].map(([k,t])=>`<button class="chip ${k===filtro?"on":""}" data-k="${k}">${t}</button>`).join("")}</div><div id="ol" class="grid"></div>`;
+  async function load(){
+    const list = await api("/orders"+(filtro?`?estado=${filtro}`:""));
+    $("#ol").innerHTML = list.length ? list.map(o=>{
+      const p = o.pago_reportado;
+      return `<div class="card"><div class="row"><b>Pedido #${o.id}</b>${badge(ESTADOS[o.estado])}<span class="spacer"></span><span class="price">${money(o.total)}</span></div>
+      <div class="small muted" style="margin:4px 0 8px">${esc(o.cliente_nombre||o.nombre||"")} · ${o.phone==="simulador"?"Simulador":"+"+esc(o.phone)} · ${fmtDate(o.created_at)}</div>
+      <div class="small">${o.items.map(i=>`• ${i.cantidad} × ${esc(i.nombre)}${i.variante?` (${esc(i.variante)})`:""} — ${money(i.precio*i.cantidad)}`).join("<br>")}</div>
+      ${o.entrega?`<div class="small" style="margin-top:6px">🚚 ${esc(o.entrega)}</div>`:""}${o.notas?`<div class="small muted">📝 ${esc(o.notas)}</div>`:""}
+      ${p?`<div class="small" style="margin-top:10px;padding:10px;border-radius:10px;background:${p.coincide_monto?"var(--brand-soft)":"var(--bad-soft)"}">
+        <b>Comprobante leído por la IA:</b> ${money(p.monto_visto)} · ${esc(p.banco_o_app||"")} · ref ${esc(p.referencia||"-")}<br>${p.coincide_monto?"✅ El monto coincide":"⚠️ El monto NO coincide con el pedido"}${p.observaciones?`<br>Obs: ${esc(p.observaciones)}`:""}
+        <br><b>Revisa tu banco/app antes de confirmar.</b></div>`:""}
+      <div class="row" style="margin-top:12px"><a class="btn sm" href="#chats/${o.conv_id}">💬 Ver chat</a><span class="spacer"></span>
+        ${o.estado!=="pagado"&&o.estado!=="cancelado"?`<button class="btn sm bad" data-a="cancelado" data-id="${o.id}">Cancelar</button><button class="btn sm pri" data-a="pagado" data-id="${o.id}">✅ Confirmar pago</button>`:""}</div></div>`;
+    }).join("") : `<div class="card empty">No hay pedidos en esta vista.</div>`;
+  }
+  $("#fil").onclick = e => { const b=e.target.closest(".chip"); if(!b) return; filtro=b.dataset.k; [...$("#fil").children].forEach(c=>c.classList.toggle("on",c===b)); load(); };
+  $("#ol").onclick = async e => { const b=e.target.closest("[data-a]"); if(!b) return;
+    if(b.dataset.a==="cancelado" && !confirm("¿Cancelar este pedido? Se devolverá el stock.")) return;
+    b.disabled=true; try{ await api(`/orders/${b.dataset.id}/status`,{method:"POST",body:{estado:b.dataset.a}}); toast(b.dataset.a==="pagado"?"Pago confirmado y cliente avisado ✅":"Pedido cancelado"); load(); refreshBadges(); }catch(err){ toast(err.message); b.disabled=false; } };
+  await load(); poll(load, 8000);
+};
+
+// ====================== CATÁLOGO ======================
+VIEWS.catalogo = async () => {
+  const v = $("#view");
+  v.innerHTML = `<div class="row" style="margin-bottom:16px"><div><h1>Catálogo</h1><p class="sub" style="margin:0">Lo que tu vendedor puede ofrecer. Tip: en <a href="#configurar">Configurar</a> puedes mandarle una foto de tu lista de precios y la IA lo carga sola.</p></div><span class="spacer"></span><button class="btn pri" id="new">+ Nuevo producto</button></div><div id="pl" class="grid prods"></div>`;
+  async function load(){
+    const list = await api("/products");
+    $("#pl").innerHTML = list.length ? list.map(p=>`<div class="card prod">${p.imagen_url?`<img src="${esc(p.imagen_url)}" alt="">`:`<div class="ph">Sin foto</div>`}
+      <div class="row"><b style="flex:1">${esc(p.nombre)}</b>${p.activo?"":badge(["Oculto",""])}</div>
+      <div class="price">${money(p.precio)}</div>
+      <div class="small muted">${p.stock===null?"Sin control de stock":p.stock>0?`${p.stock} en stock`:"<b style='color:var(--bad)'>Agotado</b>"}</div>
+      ${p.variantes?`<div class="small">${esc(p.variantes)}</div>`:""}
+      <div class="row" style="margin-top:10px"><button class="btn sm" data-e="${p.id}">Editar</button><button class="btn sm bad" data-d="${p.id}">Eliminar</button></div></div>`).join("")
+      : `<div class="card empty" style="grid-column:1/-1">Tu catálogo está vacío.<br><br><a class="btn pri" href="#configurar">✨ Cargarlo con la IA</a></div>`;
+    $("#pl").onclick = async e => {
+      const ed=e.target.closest("[data-e]"), dl=e.target.closest("[data-d]");
+      if(ed) editProduct(list.find(p=>p.id==ed.dataset.e), load);
+      if(dl && confirm("¿Eliminar este producto?")){ await api("/products/"+dl.dataset.d,{method:"DELETE"}); load(); }
+    };
+  }
+  $("#new").onclick = () => editProduct({}, load);
+  await load();
+};
+function editProduct(p, done){
+  const m = document.createElement("div"); m.className="modal";
+  m.innerHTML = `<div class="card"><h2>${p.id?"Editar":"Nuevo"} producto</h2>
+    <label class="f"><span>Nombre</span><input class="i" name="nombre" value="${esc(p.nombre||"")}" placeholder="Zapatos urbanos blancos"></label>
+    <div class="grid two"><label class="f"><span>Precio ($)</span><input class="i" name="precio" type="number" step="0.01" value="${p.precio??""}"></label>
+    <label class="f"><span>Stock <small>(vacío = no controlar)</small></span><input class="i" name="stock" type="number" value="${p.stock??""}"></label></div>
+    <label class="f"><span>Variantes <small>(tallas, colores…)</small></span><input class="i" name="variantes" value="${esc(p.variantes||"")}" placeholder="Tallas 38 a 43; blanco y negro"></label>
+    <label class="f"><span>Descripción y argumentos de venta</span><textarea class="i" name="descripcion" placeholder="Material, beneficios, para quién es, garantía…">${esc(p.descripcion||"")}</textarea></label>
+    <label class="f"><span>Foto <small>(la IA la envía al cliente)</small></span><input type="file" accept="image/*" name="img"></label>
+    ${p.imagen_url?`<img src="${esc(p.imagen_url)}" style="max-width:120px;border-radius:8px">`:""}
+    <label class="row small" style="margin:10px 0"><input type="checkbox" name="activo" ${p.activo===0?"":"checked"}> Visible para la IA</label>
+    <div class="row"><span class="spacer"></span><button class="btn" data-x>Cancelar</button><button class="btn pri" data-s>Guardar</button></div></div>`;
+  document.body.appendChild(m);
+  m.onclick = async e => {
+    if(e.target===m || e.target.closest("[data-x]")) return m.remove();
+    if(!e.target.closest("[data-s]")) return;
+    const g = n => m.querySelector(`[name=${n}]`);
+    const body = {id:p.id, nombre:g("nombre").value, precio:g("precio").value, stock:g("stock").value, variantes:g("variantes").value, descripcion:g("descripcion").value, activo:g("activo").checked};
+    if(g("img").files[0]) body.imagen_data = await shrinkImage(g("img").files[0], 1200);
+    try{ await api("/products",{method:"POST",body}); m.remove(); toast("Producto guardado"); done(); }catch(err){ toast(err.message); }
+  };
+}
+
+// ====================== CONFIGURAR ======================
+VIEWS.configurar = async () => {
+  const v = $("#view");
+  v.innerHTML = `<h1>Configura tu vendedor</h1><p class="sub">Cuéntale a la IA qué vendes, como si se lo explicaras a un vendedor nuevo. Puedes mandarle foto de tu lista de precios o menú.</p>
+    <div class="grid two">
+      <div class="card setupchat"><div class="msgs" id="sm"></div>
+        <div class="composer"><label class="btn" title="Adjuntar foto o PDF">📎<input type="file" id="sf" accept="image/*,application/pdf" multiple hidden></label>
+        <textarea class="i" id="st" placeholder="Ej: Vendo zapatos deportivos a $15, tallas 36 a 43. Me pagan por Deuna al 099… o transferencia Pichincha…"></textarea><button class="btn pri" id="ss">Enviar</button></div></div>
+      <div class="card"><div class="tabs" id="tb"><button class="on" data-t="negocio">Negocio</button><button data-t="seguimiento">Seguimiento</button><button data-t="avisos">Avisos</button></div><div id="tf"></div></div>
+    </div>`;
+  let files = [];
+  async function loadChat(){
+    const h = await api("/setup/history");
+    $("#sm").innerHTML = (h.length? "" : `<div class="bub">👋 ¡Hola! Soy tu asistente de configuración. Cuéntame:<br><br>1️⃣ ¿Qué vendes y a qué precio? (o mándame foto de tu lista)<br>2️⃣ ¿Cómo te pagan? (Deuna, transferencia, efectivo…)<br>3️⃣ ¿Cómo entregas?<br><br>Con eso dejo tu vendedor listo.</div>`)
+      + h.map(m=>`<div class="bub ${m.role==="user"?"out":""}">${m.archivo?"📎 ":""}${esc(m.text)}</div>`).join("")
+      + (h.length?`<div style="align-self:center"><button class="btn sm" id="sr">Empezar charla nueva</button></div>`:"");
+    $("#sm").scrollTop = $("#sm").scrollHeight;
+    const r=$("#sr"); if(r) r.onclick = async()=>{ await api("/setup/reset",{method:"POST"}); loadChat(); };
+  }
+  async function send(){
+    const text = $("#st").value.trim(); if(!text && !files.length) return;
+    $("#ss").disabled = true; $("#st").value = "";
+    $("#sm").insertAdjacentHTML("beforeend", `<div class="bub out">${files.length?"📎 ":""}${esc(text)}</div><div class="typing" id="ty">La IA está configurando tu vendedor…</div>`);
+    $("#sm").scrollTop = $("#sm").scrollHeight;
+    try{ await api("/setup/chat",{method:"POST",body:{text, files}}); }catch(e){ toast(e.message); }
+    files = []; $("#sf").value=""; $("#ss").disabled = false; await loadChat(); loadForm(curTab);
+  }
+  $("#ss").onclick = send; $("#st").onkeydown = e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } };
+  $("#sf").onchange = async e => { files = await Promise.all([...e.target.files].map(f=>shrinkImage(f))); toast(`${files.length} archivo(s) listo(s). Escribe algo y envía.`); };
+
+  let curTab = "negocio";
+  $("#tb").onclick = e => { const b=e.target.closest("button"); if(!b) return; curTab=b.dataset.t; [...$("#tb").children].forEach(c=>c.classList.toggle("on",c===b)); loadForm(curTab); };
+  async function loadForm(tab){
+    const s = await api("/settings");
+    const F = (sec,k,label,hint,area)=>`<label class="f"><span>${label}${hint?` <small>${hint}</small>`:""}</span>${area?`<textarea class="i" data-s="${sec}" data-k="${k}">${esc(s[sec][k])}</textarea>`:`<input class="i" data-s="${sec}" data-k="${k}" value="${esc(s[sec][k])}">`}</label>`;
+    let html = "";
+    if(tab==="negocio") html = F("negocio","nombre","Nombre del negocio") + F("negocio","nombre_vendedor","Nombre de tu vendedor(a) virtual") + F("negocio","rubro","¿Qué vendes?")
+      + F("negocio","descripcion","Descripción y por qué comprarte","",1) + F("negocio","ciudad","Ciudad / zona") + F("negocio","horario_atencion","Horario de atención humana")
+      + F("negocio","metodos_pago","Datos de pago","(exactos: Deuna, cuentas, titular)",1) + F("negocio","entregas","Entregas y envíos","",1) + F("negocio","politicas","Políticas","(cambios, garantía, descuentos permitidos)",1)
+      + F("negocio","preguntas_frecuentes","Preguntas frecuentes","",1) + F("negocio","tono","Tono al escribir") + F("negocio","instrucciones_extra","Instrucciones especiales","",1);
+    if(tab==="seguimiento") html = `<label class="row" style="margin-bottom:12px"><input type="checkbox" data-s="seguimiento" data-k="activo" ${s.seguimiento.activo?"checked":""}> <b>Hacer seguimiento automático a clientes que dejan de responder</b></label>
+      <label class="f"><span>¿Cuándo escribirles? <small>(horas desde su último mensaje, separadas por coma; máx. 23 h por reglas de WhatsApp)</small></span><input class="i" data-s="seguimiento" data-k="horas" data-list value="${esc(s.seguimiento.horas.join(", "))}"></label>
+      <div class="grid two"><label class="f"><span>No escribir antes de (hora)</span><input class="i" type="number" data-s="seguimiento" data-k="hora_inicio" data-num value="${s.seguimiento.hora_inicio}"></label>
+      <label class="f"><span>Ni después de (hora)</span><input class="i" type="number" data-s="seguimiento" data-k="hora_fin" data-num value="${s.seguimiento.hora_fin}"></label></div>
+      <label class="row" style="margin:6px 0 12px"><input type="checkbox" data-s="bot" data-k="activo" ${s.bot.activo?"checked":""}> <b>IA encendida</b> <span class="small muted">(apágala para atender todo tú)</span></label>
+      <label class="f"><span>Esperar antes de responder <small>(segundos; agrupa varios mensajes seguidos del cliente)</small></span><input class="i" type="number" data-s="bot" data-k="agrupar_mensajes_segundos" data-num value="${s.bot.agrupar_mensajes_segundos}"></label>
+      <label class="f"><span>Respuesta cuando envían audios</span><input class="i" data-s="bot" data-k="mensaje_audio" value="${esc(s.bot.mensaje_audio)}"></label>`;
+    if(tab==="avisos") html = `<p class="small muted">Te avisamos por WhatsApp cuando un cliente necesita una persona o reporta un pago. (WhatsApp solo deja enviarte avisos si le escribiste al número del negocio en las últimas 24 h; siempre los verás también en el panel.)</p>
+      <label class="f"><span>Tu número de WhatsApp <small>(con código de país, ej: 593991234567)</small></span><input class="i" data-s="dueño" data-k="whatsapp" value="${esc(s["dueño"].whatsapp)}"></label>`;
+    $("#tf").innerHTML = html + `<button class="btn pri" id="sv">Guardar cambios</button>`;
+    $("#sv").onclick = async () => {
+      const out = {};
+      $("#tf").querySelectorAll("[data-s]").forEach(el=>{
+        const sec=el.dataset.s; out[sec] ||= {};
+        out[sec][el.dataset.k] = el.type==="checkbox" ? el.checked : el.dataset.list!==undefined ? el.value.split(",").map(x=>+x.trim()).filter(x=>x>0&&x<=23) : el.dataset.num!==undefined ? +el.value : el.value;
+      });
+      for(const [sec,vals] of Object.entries(out)) await api("/settings/"+sec,{method:"POST",body:vals});
+      toast("Guardado ✅");
+    };
+  }
+  await loadChat(); await loadForm("negocio");
+};
+
+// ====================== PROBAR ======================
+VIEWS.probar = async () => {
+  const v = $("#view");
+  v.innerHTML = `<h1>Prueba tu vendedor</h1><p class="sub">Escríbele como si fueras un cliente. Prueba precios, tallas, objeciones, pide pagar y envía una foto de un comprobante.</p>
+    <div class="row" style="align-items:flex-start;gap:20px">
+      <div class="phone"><div class="top"><div class="av">🛍️</div><div><b id="pn">Tu negocio</b><div class="small" style="opacity:.8" id="ps">en línea</div></div></div>
+        <div class="msgs" id="pm"></div>
+        <div class="composer"><label class="btn" title="Enviar foto">📷<input type="file" id="pf" accept="image/*,application/pdf" hidden></label><textarea class="i" id="pt" placeholder="Mensaje"></textarea><button class="btn pri" id="ps2">➤</button></div></div>
+      <div style="flex:1;min-width:260px" class="grid">
+        <div class="card"><h2>Lo que ve el equipo</h2><div id="pinfo" class="small muted">Empieza la conversación…</div></div>
+        <div class="card"><h2>Ideas para probar</h2><div class="chips" id="ideas">${["Hola, ¿cuánto cuestan?","¿Tienen talla 40?","Está caro 😕","¿Hacen envíos a Quito?","Ok, lo quiero","¿Eres un robot?","Quiero hablar con una persona"].map(t=>`<button class="chip">${t}</button>`).join("")}</div>
+        <button class="btn" id="pr">🔄 Reiniciar conversación</button></div>
+      </div></div>`;
+  const s = await api("/settings"); $("#pn").textContent = s.negocio.nombre || "Tu negocio";
+  let lastN = -1, waiting = false;
+  async function load(){
+    const c = await api("/sim");
+    const n = c.messages.length;
+    if(n!==lastN){ lastN=n; waiting = c.messages.at(-1)?.role==="cliente" && c.modo!=="humano";
+      $("#pm").innerHTML = (n?renderMsgs(c.messages):`<div class="empty">Escribe "Hola" para empezar 👇</div>`) + (waiting?`<div class="typing">escribiendo…</div>`:"");
+      $("#pm").scrollTop = $("#pm").scrollHeight; }
+    $("#ps").textContent = waiting ? "escribiendo…" : "en línea";
+    if(c.id) $("#pinfo").innerHTML = `<div class="row" style="gap:6px;margin-bottom:8px">${badge(ETAPAS[c.etapa])}${c.modo==="humano"?badge(["👤 Pasado a humano","b-bad"]):badge(["🤖 IA atendiendo","b-ok"])}</div>
+      ${c.modo==="humano"?`<p>Motivo: ${esc(c.motivo_humano)}</p><button class="btn sm" id="back2ia">Devolver a la IA</button>`:""}
+      ${c.notas?`<p style="white-space:pre-wrap;color:var(--ink)">${esc(c.notas)}</p>`:""}
+      ${c.orders.filter(o=>o.estado!=="cancelado").map(o=>`<div style="margin-top:8px;color:var(--ink)">🧾 <b>Pedido #${o.id}</b> ${badge(ESTADOS[o.estado])}<br>${o.items.map(i=>`${i.cantidad} × ${esc(i.nombre)} ${esc(i.variante)}`).join("<br>")}<br><b>Total ${money(o.total)}</b>
+        ${o.estado==="por_verificar"?`<br><button class="btn sm pri" data-pay="${o.id}" style="margin-top:6px">✅ Confirmar pago (como dueño)</button>`:""}</div>`).join("")}`;
+    const b2=$("#back2ia"); if(b2) b2.onclick = async()=>{ await api(`/conversations/${c.id}/mode`,{method:"POST",body:{modo:"ia"}}); load(); };
+  }
+  $("#pinfo").onclick = async e=>{ const b=e.target.closest("[data-pay]"); if(b){ await api(`/orders/${b.dataset.pay}/status`,{method:"POST",body:{estado:"pagado"}}); toast("Pago confirmado"); lastN=-1; load(); } };
+  async function send(text, file){
+    text = (text??$("#pt").value).trim(); if(!text && !file) return; $("#pt").value="";
+    try{ await api("/sim/send",{method:"POST",body:{text, file}}); }catch(e){ toast(e.message); }
+    lastN=-1; load();
+  }
+  $("#ps2").onclick = ()=>send(); $("#pt").onkeydown = e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } };
+  $("#pf").onchange = async e=>{ const f=e.target.files[0]; if(f) send($("#pt").value, await shrinkImage(f)); e.target.value=""; };
+  $("#ideas").onclick = e=>{ const b=e.target.closest(".chip"); if(b) send(b.textContent); };
+  $("#pr").onclick = async()=>{ await api("/sim/reset",{method:"POST"}); lastN=-1; load(); };
+  await load(); poll(load, 1500);
+};
+
+// ====================== WHATSAPP ======================
+VIEWS.whatsapp = async () => {
+  const st = await api("/status");
+  $("#view").innerHTML = `<h1>Conectar WhatsApp</h1><p class="sub">Usamos la API oficial de WhatsApp Business de Meta: sin riesgo de bloqueos y con tu número de negocio.</p>
+    <div class="card" style="margin-bottom:14px">${[[st.claude,"Clave de IA (ANTHROPIC_API_KEY)"],[st.whatsapp,"Token y número de WhatsApp"],[st.verify_token,"Token de verificación del webhook"],[st.public_url,"Dirección pública (PUBLIC_URL) para enviar fotos de productos"]]
+      .map(([ok,t])=>`<div class="check"><span class="dot ${ok?"ok":"no"}">${ok?"✓":"!"}</span><b>${t}</b></div>`).join("")}</div>
+    <div class="card"><h2>Pasos (una sola vez, ~20 minutos)</h2><ol class="steps">
+      <li>Entra a <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com</a> → <b>Crear app</b> → tipo <b>Empresa</b> → agrega el producto <b>WhatsApp</b>.</li>
+      <li>En <b>WhatsApp → Configuración de la API</b> copia el <b>Identificador del número de teléfono</b> y genera un <b>token permanente</b> (Configuración del negocio → Usuarios del sistema).</li>
+      <li>Pon esos datos en el archivo <code>.env</code>: <code>WHATSAPP_TOKEN</code>, <code>WHATSAPP_PHONE_NUMBER_ID</code>, inventa un <code>WHATSAPP_VERIFY_TOKEN</code> y copia el <code>WHATSAPP_APP_SECRET</code> (Configuración de la app → Básica). Reinicia el programa.</li>
+      <li>En <b>WhatsApp → Configuración → Webhook</b> pega esta URL:<br><code>${esc(st.webhook_url)}</code><br>y el mismo token de verificación. Suscríbete al campo <b>messages</b>.</li>
+      <li>Agrega tu número de negocio real (o usa el de prueba) y escríbele desde tu celular. ¡Listo! Verás el chat en <a href="#chats">Chats</a>.</li></ol>
+      <p class="small muted">Importante: WhatsApp permite responder libremente hasta 24 horas después del último mensaje del cliente. Por eso los seguimientos automáticos se envían dentro de esa ventana.</p></div>`;
+};
+
+renderNav(); route(); refreshBadges(); setInterval(refreshBadges, 20000);
+</script>
+</body>
+</html>
